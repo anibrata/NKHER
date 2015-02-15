@@ -3,11 +3,13 @@ package edu.umd.nkher;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Set;
 import java.util.StringTokenizer;
+import java.util.TreeSet;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -35,18 +37,18 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
 
-import edu.umd.nkher.HMapStIW;
+import tl.lin.data.map.*;
 import edu.umd.nkher.PairOfStrings;
 
 public class StripesPMI extends Configured implements Tool {
 
   private static final Logger LOG = Logger.getLogger(StripesPMI.class);
   
-  protected static class WordCountSentenceMapper extends
+  private static class WordCountSentenceMapper extends
       Mapper<LongWritable, Text, Text, IntWritable> {
 
     private final static Text WORD = new Text();
-    private final static IntWritable ONE = new IntWritable();
+    private final static IntWritable ONE = new IntWritable(1);
 
     @Override
     public void map(LongWritable key, Text value, Context context)
@@ -54,8 +56,9 @@ public class StripesPMI extends Configured implements Tool {
       String line = value.toString();
       StringTokenizer tokenizer = new StringTokenizer(line);
       HashSet<String> hashSet = new HashSet<String>();
+      String token = "";
       while (tokenizer.hasMoreTokens()) {
-        String token = tokenizer.nextToken();
+        token = tokenizer.nextToken();
         if (!hashSet.contains(token)) {
           hashSet.add(token);
           WORD.set(token);
@@ -65,7 +68,7 @@ public class StripesPMI extends Configured implements Tool {
     }
   }
 
-  protected static final class WordCountSentenceReducer extends
+  private static final class WordCountSentenceReducer extends
       Reducer<Text, IntWritable, Text, IntWritable> {
     private final static IntWritable TOTAL = new IntWritable();
 
@@ -81,38 +84,46 @@ public class StripesPMI extends Configured implements Tool {
     }
   }
 
-  protected static class StripesPMI_Mapper extends
+  private static class StripesPMI_Mapper extends
       Mapper<LongWritable, Text, Text, HMapStIW> {
-    private static HMapStIW hashMap = new HMapStIW();
-    private static Text KEY = new Text();
+    private final static HMapStIW hashMap = new HMapStIW();
+    private final static Text KEY = new Text();
 
     @Override
     public void map(LongWritable key, Text value, Context context)
         throws IOException, InterruptedException {
-      String line = value.toString();
-      // StringTokenizer tokenizer = new StringTokenizer(line);
 
-      String[] terms = line.split("\\s+");
-      int len = terms.length;
-      for (int i=0;i<len;i++) {
-    	  String keyTerm = terms[i];
-    	  if(keyTerm.length() == 0)
-    		  continue;
-    	  hashMap.clear();
-    	  for(int j=0;j<len;j++) {
-    		  if (j == i) 
-    			  continue;
-    		  if(terms[j].length() == 0)
-    			  continue;
-    		  hashMap.increment(terms[j]);
-    	  }
-    	  KEY.set(keyTerm);
-    	  context.write(KEY, hashMap);
+      String line = value.toString();
+      StringTokenizer tokenizer = new StringTokenizer(line);
+      Set<String> sortedTokens = new TreeSet<String>();
+      while (tokenizer.hasMoreTokens()) {
+        sortedTokens.add(tokenizer.nextToken());
+      }
+      String[] lineWords = new String[sortedTokens.size()];
+      sortedTokens.toArray(lineWords);
+
+      int length = lineWords.length;
+      for (int i = 0; i < length; i++) {
+        String keyTerm = lineWords[i];
+        if(keyTerm.length() == 0) {
+        	continue;
+        }
+        hashMap.clear();
+        for (int j = (i + 1); j < length; j++) {
+        	if(lineWords[j].length() == 0) {
+            	continue;
+            }
+          if (!hashMap.containsKey(lineWords[j])) {
+            hashMap.put(lineWords[j], 1);
+          }
+        }
+        KEY.set(keyTerm);
+        context.write(KEY, hashMap);
       }
     }
   }
 
-  protected static class StripesPMI_Combiner extends
+  private static class StripesPMI_Combiner extends
       Reducer<Text, HMapStIW, Text, HMapStIW> {
 
     private static HMapStIW hashMap = new HMapStIW();
@@ -120,7 +131,9 @@ public class StripesPMI extends Configured implements Tool {
     @Override
     public void reduce(Text key, Iterable<HMapStIW> values, Context context)
         throws IOException, InterruptedException {
-      for (HMapStIW hmap : values) {
+      Iterator<HMapStIW> iter = values.iterator();
+      while (iter.hasNext()) {
+        HMapStIW hmap = iter.next();
         for (String word : hmap.keySet()) {
           int curCount = hmap.get(word);
           if (hashMap.containsKey(word)) {
@@ -134,7 +147,7 @@ public class StripesPMI extends Configured implements Tool {
     }
   }
 
-  protected static class StripesPMI_Reducer extends
+  private static class StripesPMI_Reducer extends
       Reducer<Text, HMapStIW, PairOfStrings, DoubleWritable> {
 
     private static final HashMap<String, Integer> hashMap =
