@@ -107,9 +107,6 @@ public class PairsPMI extends Configured implements Tool {
   protected static class MyReducer extends
       Reducer<PairOfStrings, DoubleWritable, PairOfStrings, DoubleWritable> {
     private static final DoubleWritable FINAL_COUNT = new DoubleWritable();
-    private static DoubleWritable p_x = new DoubleWritable();
-    private static DoubleWritable p_y = new DoubleWritable();
-    private static DoubleWritable p_x_y = new DoubleWritable();
     private static DoubleWritable PMI = new DoubleWritable();
     private static double N = 156215.0; // calculated in a separate java file
 
@@ -136,7 +133,7 @@ public class PairsPMI extends Configured implements Tool {
           double numberator = sum / N;
           double prob_occ_x = dictionary.get(key.getLeftElement()) / N;
           double prob_occ_y = dictionary.get(key.getRightElement()) / N;
-          pmi = Math.log( (numberator)  / (prob_occ_x * prob_occ_y) );
+          pmi = Math.log10( (numberator)  / (prob_occ_x * prob_occ_y) );
           PMI.set(pmi);
           context.write(key, PMI);
         }
