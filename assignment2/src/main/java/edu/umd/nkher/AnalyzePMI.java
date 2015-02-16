@@ -17,7 +17,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.util.ToolRunner;
 
-import tl.lin.*;
+import edu.umd.nkher.PairOfStrings;
+import edu.umd.nkher.PairOfWritables;
 import com.google.common.collect.Lists;
 
 public class AnalyzePMI {

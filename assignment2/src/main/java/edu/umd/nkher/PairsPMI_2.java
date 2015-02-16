@@ -46,7 +46,7 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
 
-import tl.lin.*;
+import edu.umd.nkher.PairOfStrings;
 
 public class PairsPMI_2 extends Configured implements Tool {
   private static final Logger LOG = Logger.getLogger(PairsPMI_2.class);
