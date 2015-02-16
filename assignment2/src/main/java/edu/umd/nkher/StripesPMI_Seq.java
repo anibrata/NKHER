@@ -38,7 +38,8 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
 
-import tl.lin.data.map.*;
+import edu.umd.nkher.HMapStIW;
+import edu.umd.nkher.PairOfStrings;
 
 public class StripesPMI_Seq extends Configured implements Tool {
 

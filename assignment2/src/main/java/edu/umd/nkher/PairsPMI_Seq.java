@@ -43,7 +43,8 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
 
-import tl.lin.*;
+import edu.umd.nkher.HMapStIW;
+import edu.umd.nkher.PairOfStrings;
 import cern.colt.Arrays;
 
 public class PairsPMI_Seq extends Configured implements Tool {
