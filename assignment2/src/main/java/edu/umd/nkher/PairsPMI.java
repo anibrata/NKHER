@@ -162,7 +162,7 @@ public class PairsPMI extends Configured implements Tool {
       FileSystem fileSystem = FileSystem.get(configuration);
       
       String path = System.getProperty("user.dir");
-      Path pathToFile = new Path("/home/cloudera/Desktop/Big_Data_Assignments/bigdata-assignments/assignment2/pairsWordCount/part-r-00000");
+      Path pathToFile = new Path("/user/hdedu6/Big_Data_Assignments/bigdata-assignments/assignment2/pairsWordCount/part-r-00000");
 
       BufferedReader bufferedReader = null;
       FSDataInputStream fsdis = null;
@@ -256,7 +256,7 @@ public class PairsPMI extends Configured implements Tool {
     String inputPath = cmdline.getOptionValue(INPUT);
     String outputPath = cmdline.getOptionValue(OUTPUT);  // this output will be used by second map reduce job
     String path = System.getProperty("user.dir");
-    String mapperOneOutputPath = "/home/cloudera/Desktop/Big_Data_Assignments/bigdata-assignments/assignment2/pairsWordCount";
+    String mapperOneOutputPath = "/user/hdedu6/Big_Data_Assignments/bigdata-assignments/assignment2/pairsWordCount";
     
     Path path2 = new Path(mapperOneOutputPath);
     
