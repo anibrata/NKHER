@@ -38,7 +38,6 @@ import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
 
 import tl.lin.data.map.*;
-import edu.umd.nkher.PairOfStrings;
 
 public class StripesPMI extends Configured implements Tool {
 
@@ -84,7 +83,7 @@ public class StripesPMI extends Configured implements Tool {
     }
   }
 
-  private static class StripesPMI_Mapper extends
+  private static class MyMapper extends
       Mapper<LongWritable, Text, Text, HMapStIW> {
     private final static HMapStIW hashMap = new HMapStIW();
     private final static Text KEY = new Text();
@@ -123,35 +122,24 @@ public class StripesPMI extends Configured implements Tool {
     }
   }
 
-  private static class StripesPMI_Combiner extends
+  private static class MyCombiner extends
       Reducer<Text, HMapStIW, Text, HMapStIW> {
-
-    private static HMapStIW hashMap = new HMapStIW();
 
     @Override
     public void reduce(Text key, Iterable<HMapStIW> values, Context context)
         throws IOException, InterruptedException {
       Iterator<HMapStIW> iter = values.iterator();
+      HMapStIW map = new HMapStIW();
       while (iter.hasNext()) {
-        HMapStIW hmap = iter.next();
-        for (String word : hmap.keySet()) {
-          int curCount = hmap.get(word);
-          if (hashMap.containsKey(word)) {
-            hashMap.put(word, hashMap.get(word) + curCount);
-          } else {
-            hashMap.put(word, curCount);
-          }
-        }
+        map.plus(iter.next());
       }
-      context.write(key, hashMap);
+      context.write(key, map);
     }
   }
 
-  private static class StripesPMI_Reducer extends
+  private static class MyReducer extends
       Reducer<Text, HMapStIW, PairOfStrings, DoubleWritable> {
 
-    private static final HashMap<String, Integer> hashMap =
-        new HashMap<String, Integer>();
     private static final PairOfStrings PAIR_OF_WORDS = new PairOfStrings();
     private static final DoubleWritable PMI = new DoubleWritable();
     private static final double N = 156215.0; // number of sentences
@@ -168,7 +156,7 @@ public class StripesPMI extends Configured implements Tool {
       FileSystem fileSystem = FileSystem.get(configuration);
 
       String path = System.getProperty("user.dir");
-      Path pathToFile = new Path(path + "/part-r-00000");
+      Path pathToFile = new Path("/home/cloudera/Desktop/Big_Data_Assignments/bigdata-assignments/assignment2/stripesWordCount/part-r-00000");
 
       BufferedReader bufferedReader = null;
       FSDataInputStream fsdis = null;
@@ -182,9 +170,9 @@ public class StripesPMI extends Configured implements Tool {
             .println("Some error occured while opening the file. Please check if the file is being properly made !");
       }
       try {
-        String line = bufferedReader.readLine();
+        String line = "";
         while ( (line = bufferedReader.readLine()) != null ) {
-          String[] arr = line.split(" ");
+          String[] arr = line.split("\\s+");
           if (arr.length == 2) {
             dictionary.put(arr[0], Integer.parseInt(arr[1]));
           } else {
@@ -192,12 +180,11 @@ public class StripesPMI extends Configured implements Tool {
           }
         }
       }
- catch (Exception e) {
-        LOG.info("Some error occured while reading the file");
-      } finally {
-        bufferedReader.close();
-        fsdis.close();
-        isr.close();
+	 catch (Exception e) {
+	        LOG.info("Some error occured while reading the file");
+	      }
+      finally {
+    	  bufferedReader.close();  
       }
     }
 
@@ -205,27 +192,22 @@ public class StripesPMI extends Configured implements Tool {
     public void reduce(Text key, Iterable<HMapStIW> values, Context context)
         throws IOException, InterruptedException {
 
-      for (HMapStIW hmap : values) {
-        for (String word : hmap.keySet()) {
-          int curCount = hmap.get(word);
-          if (hashMap.containsKey(word)) {
-            hashMap.put(word, hashMap.get(word) + curCount);
-          } else {
-            hashMap.put(word, curCount);
-          }
+    	Iterator<HMapStIW> iter = values.iterator();
+        HMapStIW map = new HMapStIW();
+        while (iter.hasNext()) {
+          map.plus(iter.next());
         }
-      }
       
       String leftWordOfPair = key.toString();
       
-      for (String rightWordOfPair : hashMap.keySet()) {
-        double p_x_y = hashMap.get(rightWordOfPair);
+      for (String rightWordOfPair : map.keySet()) {
+        double p_x_y = map.get(rightWordOfPair);
         if (p_x_y >= 10) {
           PAIR_OF_WORDS.set(leftWordOfPair, rightWordOfPair);
           double numerator = p_x_y / N;
-          double prob_occ_x = dictionary.get(leftWordOfPair) / N;
-          double prob_occ_y = dictionary.get(rightWordOfPair) / N;
-          double pmi = Math.log((numerator) / (prob_occ_x * prob_occ_y));
+          double prob_occ_x = (double) dictionary.get(leftWordOfPair) / N;
+          double prob_occ_y = (double) dictionary.get(rightWordOfPair) / N;
+          double pmi = (double) Math.log10((numerator) / (prob_occ_x * prob_occ_y));
           PMI.set(pmi);
           context.write(PAIR_OF_WORDS, PMI);
         }
@@ -275,7 +257,14 @@ public class StripesPMI extends Configured implements Tool {
     String inputPath = cmdline.getOptionValue(INPUT);
     String outputPath = cmdline.getOptionValue(OUTPUT);
     String path = System.getProperty("user.dir");
-    String map1OutputPath = path;
+    String mapperOneOutputPath = "/home/cloudera/Desktop/Big_Data_Assignments/bigdata-assignments/assignment2/stripesWordCount";
+    
+    Path path2 = new Path(mapperOneOutputPath);
+    
+    FileSystem fs = FileSystem.get(getConf());
+    if(fs.exists(path2)) {
+    	fs.delete(new Path(mapperOneOutputPath), true);
+    }
 
     int reduceTasks =
         cmdline.hasOption(NUM_REDUCERS) ? Integer.parseInt(cmdline
@@ -283,28 +272,30 @@ public class StripesPMI extends Configured implements Tool {
 
     LOG.info("Tool name: " + StripesPMI.class.getSimpleName());
     LOG.info(" - input path: " + inputPath);
-    LOG.info(" - output path: " + map1OutputPath);
-    LOG.info(" - num reducers: " + reduceTasks);
+    LOG.info(" - output path: " + mapperOneOutputPath);
+    LOG.info(" - num reducers: " + 1);
 
-    Configuration configuration = getConf();
-    configuration.set("firstMapperOutPut", map1OutputPath);
+    Configuration customConfiguration = getConf();
+    customConfiguration.set("mapOneOutput", mapperOneOutputPath);
 
-    Job firstJob = Job.getInstance(configuration);
+    Job firstJob = Job.getInstance(customConfiguration);
     firstJob.setJobName("Sentence Wise Word Counter");
     firstJob.setJarByClass(StripesPMI.class);
-    firstJob.setNumReduceTasks(reduceTasks);
+    
+    firstJob.setNumReduceTasks(1); // using one reducer for the first job
 
     FileInputFormat.setInputPaths(firstJob, new Path(inputPath));
-    FileOutputFormat.setOutputPath(firstJob, new Path(map1OutputPath));
+    FileOutputFormat.setOutputPath(firstJob, new Path(mapperOneOutputPath));
 
     firstJob.setOutputKeyClass(Text.class);
     firstJob.setOutputValueClass(IntWritable.class);
 
     firstJob.setMapperClass(WordCountSentenceMapper.class);
+    firstJob.setCombinerClass(WordCountSentenceReducer.class);
     firstJob.setReducerClass(WordCountSentenceReducer.class);
 
-    Path outputmapperonePath = new Path(map1OutputPath);
-    FileSystem.get(configuration).delete(outputmapperonePath, true);
+    Path outputmapperonePath = new Path(outputPath);
+    FileSystem.get(customConfiguration).delete(outputmapperonePath, true);
 
     long startTime = System.currentTimeMillis();
     firstJob.waitForCompletion(true);
@@ -320,27 +311,28 @@ public class StripesPMI extends Configured implements Tool {
     LOG.info(" - output path: " + outputPath);
     LOG.info(" - num reducers: " + reduceTasks);
 
-    Job secondJob = Job.getInstance(configuration);
+    Job secondJob = Job.getInstance(customConfiguration, "Loading Side Data and calculating PMI");
     secondJob.setJobName(StripesPMI.class.getSimpleName());
     secondJob.setJarByClass(StripesPMI.class);
+    
     secondJob.setNumReduceTasks(reduceTasks);
 
     FileInputFormat.setInputPaths(secondJob, new Path(inputPath));
     FileOutputFormat.setOutputPath(secondJob, new Path(outputPath));
-
+    
     secondJob.setMapOutputKeyClass(Text.class);
     secondJob.setMapOutputValueClass(HMapStIW.class);
     secondJob.setOutputKeyClass(PairOfStrings.class);
     secondJob.setOutputValueClass(DoubleWritable.class);
+
+    secondJob.setMapperClass(MyMapper.class);
+    secondJob.setCombinerClass(MyCombiner.class);
+    secondJob.setReducerClass(MyReducer.class);
     secondJob.setOutputFormatClass(TextOutputFormat.class);
 
-    secondJob.setMapperClass(StripesPMI_Mapper.class);
-    secondJob.setCombinerClass(StripesPMI_Combiner.class);
-    secondJob.setReducerClass(StripesPMI_Reducer.class);
 
-    // Delete the output directory if it exists already.
     Path outputDir = new Path(outputPath);
-    FileSystem.get(configuration).delete(outputDir, true);
+    FileSystem.get(customConfiguration).delete(outputDir, true);
 
     long startTime2 = System.currentTimeMillis();
     secondJob.waitForCompletion(true);
