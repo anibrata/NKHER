@@ -31,7 +31,9 @@ import org.apache.hadoop.io.Writable;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
 
-import tl.lin.*;
+import edu.umd.nkher.PairOfStrings;
+import edu.umd.nkher.PairOfWritables;
+
 
 /**
  * Class containing a number of utility methods for manipulating SequenceFiles.
