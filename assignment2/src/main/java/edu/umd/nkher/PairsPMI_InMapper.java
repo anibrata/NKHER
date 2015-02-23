@@ -218,7 +218,8 @@ public class PairsPMI_InMapper extends Configured implements Tool {
       Reducer<PairOfStrings, DoubleWritable, PairOfStrings, DoubleWritable> {
 
     private static DoubleWritable PMI = new DoubleWritable();
-    private static final double N = numberOfLines; // number of sentences
+    Long long1 = new Long(numberOfLines);
+    private final double N = long1.doubleValue(); // number of sentences
     private static Map<String, Integer> dictionary =
         new HashMap<String, Integer>();
 

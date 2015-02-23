@@ -154,7 +154,8 @@ public class StripesPMI extends Configured implements Tool {
 
     private static final PairOfStrings PAIR_OF_WORDS = new PairOfStrings();
     private static final DoubleWritable PMI = new DoubleWritable();
-    private static final double N = numberOfLines; // number of sentences
+    Long long1 = new Long(numberOfLines);
+    private final double N = long1.doubleValue(); // number of sentences
     private static HashMap<String, Integer> dictionary =
         new HashMap<String, Integer>();
 
