@@ -27,9 +27,12 @@ import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapred.Task;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.Mapper.Context;
+import org.apache.hadoop.mapreduce.TaskCounter;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
@@ -37,12 +40,13 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
 
-import edu.umd.nkher.HMapStIW;
-import edu.umd.nkher.PairOfStrings;
+import tl.lin.data.map.HMapStIW;
+import tl.lin.data.pair.PairOfStrings;
 
 public class StripesPMI extends Configured implements Tool {
 
   private static final Logger LOG = Logger.getLogger(StripesPMI.class);
+  private static long numberOfLines = 0;
   
   private static class WordCountSentenceMapper extends
       Mapper<LongWritable, Text, Text, IntWritable> {
@@ -105,14 +109,14 @@ public class StripesPMI extends Configured implements Tool {
       int length = lineWords.length;
       for (int i = 0; i < length; i++) {
         String keyTerm = lineWords[i];
-        if(keyTerm.length() == 0) {
-        	continue;
+        if (keyTerm.length() == 0) {
+          continue;
         }
         hashMap.clear();
         for (int j = (i + 1); j < length; j++) {
-        	if(lineWords[j].length() == 0) {
-            	continue;
-            }
+          if (lineWords[j].length() == 0) {
+            continue;
+          }
           if (!hashMap.containsKey(lineWords[j])) {
             hashMap.put(lineWords[j], 1);
           }
@@ -120,6 +124,13 @@ public class StripesPMI extends Configured implements Tool {
         KEY.set(keyTerm);
         context.write(KEY, hashMap);
       }
+    }
+
+    @Override
+    public void cleanup(Context context) {
+      long lines =
+ context.getCounter(TaskCounter.MAP_INPUT_RECORDS).getValue();
+      numberOfLines += lines;
     }
   }
 
@@ -143,12 +154,14 @@ public class StripesPMI extends Configured implements Tool {
 
     private static final PairOfStrings PAIR_OF_WORDS = new PairOfStrings();
     private static final DoubleWritable PMI = new DoubleWritable();
-    private static final double N = 156215.0; // number of sentences
+    private static final double N = numberOfLines; // number of sentences
     private static HashMap<String, Integer> dictionary =
         new HashMap<String, Integer>();
 
     @Override
     public void setup(Context context) throws IOException {
+
+      System.out.println("Number of lines : " + N);
       /*
        * now we have to populate the dictionary to get the individual word
        * counts which is the output of the first mapper
@@ -157,7 +170,9 @@ public class StripesPMI extends Configured implements Tool {
       FileSystem fileSystem = FileSystem.get(configuration);
 
       String path = System.getProperty("user.dir");
-      Path pathToFile = new Path("/user/hdedu6/Big_Data_Assignments/bigdata-assignments/assignment2/stripesWordCount/part-r-00000");
+      Path pathToFile =
+          new Path(
+              "/Users/nameshkher/Documents/Hadoop-WorkSpace/assignment2/stripesWordCount/part-r-00000");
 
       BufferedReader bufferedReader = null;
       FSDataInputStream fsdis = null;
@@ -181,11 +196,10 @@ public class StripesPMI extends Configured implements Tool {
           }
         }
       }
-	 catch (Exception e) {
-	        LOG.info("Some error occured while reading the file");
-	      }
-      finally {
-    	  bufferedReader.close();  
+ catch (Exception e) {
+        LOG.info("Some error occured while reading the file");
+      } finally {
+        bufferedReader.close();
       }
     }
 
@@ -193,10 +207,10 @@ public class StripesPMI extends Configured implements Tool {
     public void reduce(Text key, Iterable<HMapStIW> values, Context context)
         throws IOException, InterruptedException {
 
-    	Iterator<HMapStIW> iter = values.iterator();
-        HMapStIW map = new HMapStIW();
-        while (iter.hasNext()) {
-          map.plus(iter.next());
+      Iterator<HMapStIW> iter = values.iterator();
+      HMapStIW map = new HMapStIW();
+      while (iter.hasNext()) {
+        map.plus(iter.next());
         }
       
       String leftWordOfPair = key.toString();
@@ -208,7 +222,7 @@ public class StripesPMI extends Configured implements Tool {
           double numerator = p_x_y / N;
           double prob_occ_x = (double) dictionary.get(leftWordOfPair) / N;
           double prob_occ_y = (double) dictionary.get(rightWordOfPair) / N;
-          double pmi = (double) Math.log10((numerator) / (prob_occ_x * prob_occ_y));
+          double pmi = Math.log10((numerator) / (prob_occ_x * prob_occ_y));
           PMI.set(pmi);
           context.write(PAIR_OF_WORDS, PMI);
         }
@@ -258,13 +272,14 @@ public class StripesPMI extends Configured implements Tool {
     String inputPath = cmdline.getOptionValue(INPUT);
     String outputPath = cmdline.getOptionValue(OUTPUT);
     String path = System.getProperty("user.dir");
-    String mapperOneOutputPath = "/user/hdedu6/Big_Data_Assignments/bigdata-assignments/assignment2/stripesWordCount";
-    
+    String mapperOneOutputPath =
+        "/Users/nameshkher/Documents/Hadoop-WorkSpace/assignment2/stripesWordCount";
+
     Path path2 = new Path(mapperOneOutputPath);
-    
+
     FileSystem fs = FileSystem.get(getConf());
-    if(fs.exists(path2)) {
-    	fs.delete(new Path(mapperOneOutputPath), true);
+    if (fs.exists(path2)) {
+      fs.delete(new Path(mapperOneOutputPath), true);
     }
 
     int reduceTasks =
@@ -282,7 +297,7 @@ public class StripesPMI extends Configured implements Tool {
     Job firstJob = Job.getInstance(customConfiguration);
     firstJob.setJobName("Sentence Wise Word Counter");
     firstJob.setJarByClass(StripesPMI.class);
-    
+
     firstJob.setNumReduceTasks(1); // using one reducer for the first job
 
     FileInputFormat.setInputPaths(firstJob, new Path(inputPath));
@@ -312,15 +327,17 @@ public class StripesPMI extends Configured implements Tool {
     LOG.info(" - output path: " + outputPath);
     LOG.info(" - num reducers: " + reduceTasks);
 
-    Job secondJob = Job.getInstance(customConfiguration, "Loading Side Data and calculating PMI");
+    Job secondJob =
+        Job.getInstance(customConfiguration,
+            "Loading Side Data and calculating PMI");
     secondJob.setJobName(StripesPMI.class.getSimpleName());
     secondJob.setJarByClass(StripesPMI.class);
-    
+
     secondJob.setNumReduceTasks(reduceTasks);
 
     FileInputFormat.setInputPaths(secondJob, new Path(inputPath));
     FileOutputFormat.setOutputPath(secondJob, new Path(outputPath));
-    
+
     secondJob.setMapOutputKeyClass(Text.class);
     secondJob.setMapOutputValueClass(HMapStIW.class);
     secondJob.setOutputKeyClass(PairOfStrings.class);

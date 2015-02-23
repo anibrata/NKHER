@@ -1,18 +1,18 @@
 package edu.umd.nkher;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileNotFoundException;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.StringTokenizer;
-import java.util.Iterator;
 import java.util.TreeSet;
 
 import org.apache.commons.cli.CommandLine;
@@ -26,17 +26,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapred.Task;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
-import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.apache.hadoop.mapreduce.TaskCounter;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
@@ -45,40 +42,82 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
 
+import tl.lin.data.map.HMapStIW;
 import tl.lin.data.pair.PairOfStrings;
-import cern.colt.Arrays;
 
-public class PairsPMI extends Configured implements Tool {
+public class StripesPMI_InMapper extends Configured implements Tool {
 
-  private static final Logger LOG = Logger.getLogger(PairsPMI.class);
+  private static final Logger LOG = Logger.getLogger(StripesPMI_InMapper.class);
   private static long numberOfLines = 0;
 
   private static class WordCountSentenceMapper extends
       Mapper<LongWritable, Text, Text, IntWritable> {
 
-    // Objects for reuse
+    private Map<String, Integer> map;
     private final static Text KEY = new Text();
-    private final static IntWritable ONE = new IntWritable(1);
+    private final static IntWritable INT = new IntWritable();
+    private static final int FLUSH_SIZE = 200000;
+
+    @Override
+    public void setup(Context context) {
+      map = getMap();
+    }
 
     @Override
     public void map(LongWritable key, Text value, Context context)
         throws IOException, InterruptedException {
 
+      Map<String, Integer> map = getMap();
+
       String line = value.toString();
-      StringTokenizer t = new StringTokenizer(line);
-      Set<String> unique = new HashSet<String>();
-      String token = "";
-
-      while (t.hasMoreTokens()) {
-        token = t.nextToken();
-
-        if (unique.add(token)) {
-          KEY.set(token);
-          context.write(KEY, ONE);
+      StringTokenizer tokenizer = new StringTokenizer(line);
+      while (tokenizer.hasMoreTokens()) {
+        String token = tokenizer.nextToken();
+        if (map.containsKey(token)) {
+          int total = map.get(token).intValue() + 1;
+          map.put(token, total);
+        } else {
+          map.put(token, 1);
         }
       }
+      // this will flush if required
+      flush(context, false);
     }
-  }
+
+    public void flush(Context context, boolean forceFlush) throws IOException,
+        InterruptedException {
+      Map<String, Integer> map = getMap();
+      if (!forceFlush) {
+        int size = map.size();
+        if (size < FLUSH_SIZE) {
+          return;
+        }
+      }
+      // else write it to context
+      for (String key : map.keySet()) {
+        int total = map.get(key).intValue();
+        INT.set(total);
+        KEY.set(key);
+        context.write(KEY, INT);
+        }
+      // now empty the map !
+      map.clear();
+    }
+
+    @Override
+    protected void cleanup(Context context) throws IOException,
+        InterruptedException {
+      // flush no matter what as we have to remove the items !
+      flush(context, true);
+      }
+
+    public Map<String, Integer> getMap() {
+      if (null == map) {
+        map = new HashMap<String, Integer>();
+      }
+      return map;
+      }
+    }
 
   // First stage Reducer: Totals counts for each Token and Token Pair
   private static class WordCountSentenceReducer extends
@@ -93,21 +132,29 @@ public class PairsPMI extends Configured implements Tool {
       for (IntWritable value : values) {
         sum += value.get();
       }
-
       TOTAL.set(sum);
       context.write(key, TOTAL);
+      }
     }
-  }
 
   private static class MyMapper extends
-      Mapper<LongWritable, Text, PairOfStrings, DoubleWritable> {
+      Mapper<LongWritable, Text, Text, HMapStIW> {
 
-    private final static PairOfStrings COOCCUR = new PairOfStrings();
-    private final static DoubleWritable ONE = new DoubleWritable(1.0);
+    private final static HMapStIW hashMap = new HMapStIW();
+    private final static Text KEY = new Text();
+    private Map<String, HMapStIW> map;
+    private static final int FLUSH_SIZE = 2000000;
+
+    @Override
+    public void setup(Context context) {
+      map = getMap();
+    }
 
     @Override
     public void map(LongWritable key, Text value, Context context)
         throws IOException, InterruptedException {
+
+      Map<String, HMapStIW> map = getMap();
 
       String line = value.toString();
       StringTokenizer tokenizer = new StringTokenizer(line);
@@ -115,58 +162,93 @@ public class PairsPMI extends Configured implements Tool {
       while (tokenizer.hasMoreTokens()) {
         sortedTokens.add(tokenizer.nextToken());
       }
-
       String[] lineWords = new String[sortedTokens.size()];
       sortedTokens.toArray(lineWords);
+
       int length = lineWords.length;
       for (int i = 0; i < length; i++) {
-        for (int j = i + 1; j < length; j++) {
-          COOCCUR.set(lineWords[i], lineWords[j]);
-          context.write(COOCCUR, ONE);
-
+        String keyTerm = lineWords[i];
+        if (keyTerm.length() == 0) {
+          continue;
+        }
+        hashMap.clear();
+        for (int j = (i + 1); j < length; j++) {
+          if (lineWords[j].length() == 0) {
+            continue;
+          }
+          // make the hashmap for the key
+          if (!hashMap.containsKey(lineWords[j])) {
+            hashMap.put(lineWords[j], 1);
+          }
+        }
+        // Add it above hashmap to the main one
+        if (map.containsKey(keyTerm)) {
+          HMapStIW tempMap = (HMapStIW) map.get(keyTerm).clone();
+          tempMap.plus(hashMap);
+          map.put(keyTerm, tempMap);
+        } else {
+          map.put(keyTerm, hashMap);
         }
       }
+      flush(context, false);
+    } 
+
+    public void flush(Context context, boolean forceFlush) throws IOException,
+        InterruptedException {
+      Map<String, HMapStIW> map = getMap();
+      if (!forceFlush) {
+        int size = map.size();
+        if (size < FLUSH_SIZE) {
+          return;
+        }
+      }
+      // Flush as the size has exceeded
+      File file = new File("/Users/nameshkher/Desktop/output");
+      FileWriter fw = new FileWriter(file);
+      BufferedWriter bw = new BufferedWriter(fw);
+      for (String key : map.keySet()) {
+        bw.write(key + "\t" + map.get(key) + "\n\n");
+        KEY.set(key);
+        context.write(KEY, map.get(key));
+      }
+      bw.close();
+      // Now clear the map !
+      map.clear();
+    }
+
+    public Map<String, HMapStIW> getMap() {
+      if (null == map) {
+        map = new HashMap<String, HMapStIW>();
+      }
+      return map;
     }
 
     @Override
-    public void cleanup(Context context) {
+    public void cleanup(Context context) throws IOException,
+        InterruptedException {
       long lines = context.getCounter(TaskCounter.MAP_INPUT_RECORDS).getValue();
       numberOfLines += lines;
+      flush(context, true);
     }
   }
 
-  private static class MyCombiner extends
-      Reducer<PairOfStrings, DoubleWritable, PairOfStrings, DoubleWritable> {
-    private static DoubleWritable SUM = new DoubleWritable();
-
-    @Override
-    public void reduce(PairOfStrings pair, Iterable<DoubleWritable> values,
-        Context context) throws IOException, InterruptedException {
-      double sum = 0;
-      Iterator<DoubleWritable> iter = values.iterator();
-      while (iter.hasNext()) {
-        sum += iter.next().get();
-      }
-      SUM.set(sum);
-      context.write(pair, SUM);
-    }
-  }
 
   private static class MyReducer extends
-      Reducer<PairOfStrings, DoubleWritable, PairOfStrings, DoubleWritable> {
+      Reducer<Text, HMapStIW, PairOfStrings, DoubleWritable> {
 
-    private static DoubleWritable PMI = new DoubleWritable();
-    private static PairOfStrings PAIR = new PairOfStrings();
+    private static final PairOfStrings PAIR_OF_WORDS = new PairOfStrings();
+    private static final DoubleWritable PMI = new DoubleWritable();
     private static final double N = numberOfLines; // number of sentences
-    private static Map<String, Integer> dictionary =
+    private static HashMap<String, Integer> dictionary =
         new HashMap<String, Integer>();
 
     @Override
     public void setup(Context context) throws IOException {
+
       System.out.println("Number of lines : " + N);
       /*
-       * Here we will try to put the word counts from the previous run into the
-       * dictionary
+       * now we have to populate the dictionary to get the individual word
+       * counts which is the output of the first mapper
        */
       Configuration configuration = context.getConfiguration();
       FileSystem fileSystem = FileSystem.get(configuration);
@@ -174,7 +256,7 @@ public class PairsPMI extends Configured implements Tool {
       String path = System.getProperty("user.dir");
       Path pathToFile =
           new Path(
-              "/Users/nameshkher/Documents/Hadoop-WorkSpace/assignment2/pairsWordCount/part-r-00000");
+              "/Users/nameshkher/Documents/Hadoop-WorkSpace/assignment2/stripesWordCount/part-r-00000");
 
       BufferedReader bufferedReader = null;
       FSDataInputStream fsdis = null;
@@ -184,7 +266,8 @@ public class PairsPMI extends Configured implements Tool {
         isr = new InputStreamReader(fsdis);
         bufferedReader = new BufferedReader(isr);
       } catch (Exception e) {
-        e.printStackTrace();
+        System.out
+            .println("Some error occured while opening the file. Please check if the file is being properly made !");
       }
       try {
         String line = "";
@@ -198,41 +281,46 @@ public class PairsPMI extends Configured implements Tool {
         }
       } catch (Exception e) {
         LOG.info("Some error occured while reading the file");
+      } finally {
+        bufferedReader.close();
       }
-      bufferedReader.close();
     }
 
     @Override
-    public void reduce(PairOfStrings key, Iterable<DoubleWritable> values,
-        Context context) throws IOException, InterruptedException {
+    public void reduce(Text key, Iterable<HMapStIW> values, Context context)
+        throws IOException, InterruptedException {
 
-      double number_of_occ = 0.0;
-      Iterator<DoubleWritable> iter = values.iterator();
+      Iterator<HMapStIW> iter = values.iterator();
+      HMapStIW map = new HMapStIW();
       while (iter.hasNext()) {
-        number_of_occ += iter.next().get();
+        map.plus(iter.next());
       }
 
-      if (number_of_occ >= 10.0) {
-        String word1 = key.getLeftElement();
-        String word2 = key.getRightElement();
-        double p_x_y = number_of_occ / N;
-        double p_x = (double) dictionary.get(word1) / N;
-        double p_y = (double) dictionary.get(word2) / N;
-        double pmi = Math.log10(p_x_y / (p_x * p_y));
-        PMI.set(pmi);
-        context.write(key, PMI);
+      String leftWordOfPair = key.toString();
+
+      for (String rightWordOfPair : map.keySet()) {
+        double p_x_y = map.get(rightWordOfPair);
+        if (p_x_y >= 10) {
+          PAIR_OF_WORDS.set(leftWordOfPair, rightWordOfPair);
+          double numerator = p_x_y / N;
+          double prob_occ_x = (double) dictionary.get(leftWordOfPair) / N;
+          double prob_occ_y = (double) dictionary.get(rightWordOfPair) / N;
+          double pmi = Math.log10((numerator) / (prob_occ_x * prob_occ_y));
+          PMI.set(pmi);
+          context.write(PAIR_OF_WORDS, PMI);
+        }
       }
     }
-  }
-
-  public PairsPMI() {
   }
 
   private static final String INPUT = "input";
   private static final String OUTPUT = "output";
   private static final String NUM_REDUCERS = "numReducers";
 
-  @SuppressWarnings("static-access")
+  /**
+   * Runs this tool.
+   */
+  @SuppressWarnings({ "static-access" })
   public int run(String[] args) throws Exception {
     Options options = new Options();
 
@@ -265,12 +353,10 @@ public class PairsPMI extends Configured implements Tool {
     /* JOB ONE CONFIGURATION STARTS */
 
     String inputPath = cmdline.getOptionValue(INPUT);
-    String outputPath = cmdline.getOptionValue(OUTPUT); // this output will be
-                                                        // used by second map
-                                                        // reduce job
+    String outputPath = cmdline.getOptionValue(OUTPUT);
     String path = System.getProperty("user.dir");
     String mapperOneOutputPath =
-        "/Users/nameshkher/Documents/Hadoop-WorkSpace/assignment2/pairsWordCount";
+        "/Users/nameshkher/Documents/Hadoop-WorkSpace/assignment2/stripesWordCount";
 
     Path path2 = new Path(mapperOneOutputPath);
 
@@ -283,17 +369,17 @@ public class PairsPMI extends Configured implements Tool {
         cmdline.hasOption(NUM_REDUCERS) ? Integer.parseInt(cmdline
             .getOptionValue(NUM_REDUCERS)) : 1;
 
-    LOG.info("Tool: " + PairsPMI.class.getSimpleName());
+    LOG.info("Tool name: " + StripesPMI_InMapper.class.getSimpleName());
     LOG.info(" - input path: " + inputPath);
     LOG.info(" - output path: " + mapperOneOutputPath);
-    LOG.info(" - number of reducers: " + 1);
+    LOG.info(" - num reducers: " + 1);
 
     Configuration customConfiguration = getConf();
     customConfiguration.set("mapOneOutput", mapperOneOutputPath);
 
     Job firstJob = Job.getInstance(customConfiguration);
-    firstJob.setJobName(PairsPMI.class.getSimpleName());
-    firstJob.setJarByClass(PairsPMI.class);
+    firstJob.setJobName("Sentence Wise Word Counter");
+    firstJob.setJarByClass(StripesPMI_InMapper.class);
 
     firstJob.setNumReduceTasks(1); // using one reducer for the first job
 
@@ -304,63 +390,58 @@ public class PairsPMI extends Configured implements Tool {
     firstJob.setOutputValueClass(IntWritable.class);
 
     firstJob.setMapperClass(WordCountSentenceMapper.class);
-    firstJob.setCombinerClass(WordCountSentenceReducer.class);
     firstJob.setReducerClass(WordCountSentenceReducer.class);
 
-    Path firstMapperOutputDir = new Path(mapperOneOutputPath);
-    FileSystem.get(customConfiguration).delete(firstMapperOutputDir, true);
+    Path outputmapperonePath = new Path(outputPath);
+    FileSystem.get(customConfiguration).delete(outputmapperonePath, true);
 
     long startTime = System.currentTimeMillis();
     firstJob.waitForCompletion(true);
-    LOG.info("Job Finished in " + (System.currentTimeMillis() - startTime)
-        / 1000.0 + " seconds");
+    System.out.println("Job Finished in "
+        + (System.currentTimeMillis() - startTime) / 1000.0 + " seconds");
 
     /* JOB ONE CONFIGURATION ENDS */
 
     /* JOB TWO CONFIGURATION STARTS */
 
-    LOG.info("Tool: " + PairsPMI.class.getSimpleName());
+    LOG.info("Tool name: " + StripesPMI_InMapper.class.getSimpleName());
     LOG.info(" - input path: " + inputPath);
     LOG.info(" - output path: " + outputPath);
-    LOG.info(" - number of reducers: " + reduceTasks);
+    LOG.info(" - num reducers: " + reduceTasks);
 
-    // Job secondJob = Job.getInstance(customConfiguration);
     Job secondJob =
-        new Job(customConfiguration, "Loading Side Data and calculating PMI");
-    secondJob.setJobName(PairsPMI.class.getSimpleName());
-    secondJob.setJarByClass(PairsPMI.class);
+        Job.getInstance(customConfiguration,
+            "Loading Side Data and calculating PMI");
+    secondJob.setJobName(StripesPMI_InMapper.class.getSimpleName());
+    secondJob.setJarByClass(StripesPMI_InMapper.class);
 
     secondJob.setNumReduceTasks(reduceTasks);
 
     FileInputFormat.setInputPaths(secondJob, new Path(inputPath));
     FileOutputFormat.setOutputPath(secondJob, new Path(outputPath));
-    // TextOutputFormat.setOutputPath(secondJob, new Path(outputPath));
 
-    // secondJob.setMapOutputKeyClass(Text.class);
-    // secondJob.setMapOutputValueClass(IntWritable.class);
+    secondJob.setMapOutputKeyClass(Text.class);
+    secondJob.setMapOutputValueClass(HMapStIW.class);
     secondJob.setOutputKeyClass(PairOfStrings.class);
     secondJob.setOutputValueClass(DoubleWritable.class);
 
     secondJob.setMapperClass(MyMapper.class);
-    secondJob.setCombinerClass(MyCombiner.class);
     secondJob.setReducerClass(MyReducer.class);
     secondJob.setOutputFormatClass(TextOutputFormat.class);
 
     Path outputDir = new Path(outputPath);
     FileSystem.get(customConfiguration).delete(outputDir, true);
 
-    startTime = System.currentTimeMillis();
+    long startTime2 = System.currentTimeMillis();
     secondJob.waitForCompletion(true);
-    LOG.info("Job Finished in " + (System.currentTimeMillis() - startTime)
-        / 1000.0 + " seconds");
+    System.out.println("Job Finished in "
+        + (System.currentTimeMillis() - startTime2) / 1000.0 + " seconds");
 
     return 0;
   }
 
-  /**
-   * @param args
-   */
   public static void main(String[] args) throws Exception {
-    ToolRunner.run(new PairsPMI(), args);
+    ToolRunner.run(new StripesPMI_InMapper(), args);
   }
+
 }

@@ -2,9 +2,7 @@ package edu.umd.nkher;
 
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -13,12 +11,19 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DoubleWritable;
+import org.apache.hadoop.io.SequenceFile;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.util.ToolRunner;
 
-import edu.umd.nkher.PairOfStrings;
-import edu.umd.nkher.PairOfWritables;
+import tl.lin.data.pair.PairOfStrings;
+import tl.lin.data.pair.PairOfWritables;
+import edu.umd.cloud9.io.SequenceFileUtils;
+
 import com.google.common.collect.Lists;
 
 public class AnalyzePMI {
@@ -44,7 +49,8 @@ public class AnalyzePMI {
   private static final String INPUT = "input";
 
   @SuppressWarnings({ "static-access" })
-  public static void main(String[] args) throws IOException {
+  public static void main(String[] args) throws IOException,
+      InstantiationException, IllegalAccessException {
       Options options = new Options();
 
       options.addOption(OptionBuilder.withArgName("path").hasArg()
@@ -76,6 +82,22 @@ public class AnalyzePMI {
         Lists.newArrayList();
 
     pairs = SequenceFileUtils.readDirectory(new Path(inputPath));
+    // Configuration config = new Configuration();
+    // Path path = new Path("op-seq-pairs/pairs-seq-0");
+    // SequenceFile.Reader reader =
+    // new SequenceFile.Reader(FileSystem.get(config), path, config);
+    // WritableComparable key =
+    // (WritableComparable) reader.getKeyClass().newInstance();
+    // Writable value = (Writable) reader.getValueClass().newInstance();
+    //
+    // while (reader.next(key, value)) {
+    // PairOfWritables<PairOfStrings, DoubleWritable> pair = new
+    // PairOfWritables<PairOfStrings, DoubleWritable>();
+    // pair.set((PairOfStrings) key, (DoubleWritable) value);
+    // pairs.add(pair);
+    // }
+
+    System.out.println("total : " + pairs.size());
 
     // To get the highest pair
     double highestPmi = Double.MIN_VALUE;
@@ -103,8 +125,6 @@ public class AnalyzePMI {
     List<PairOfWritables<PairOfStrings, DoubleWritable>> loveList =
         Lists.newArrayList();
 
-    Set<DoubleWritable> distinctPMI = new HashSet<DoubleWritable>();
-
     for (PairOfWritables<PairOfStrings, DoubleWritable> p : pairs) {
       PairOfStrings cooccurences = p.getLeftElement();
       if (cooccurences.getLeftElement().equals("cloud")
@@ -115,12 +135,7 @@ public class AnalyzePMI {
           || cooccurences.getRightElement().equals("love")) {
         loveList.add(p);
       }
-      if(!distinctPMI.contains(p.getRightElement())) {
-        distinctPMI.add(p.getRightElement());
-      }
     }
-
-    System.out.println("Number of distict PMI's " + distinctPMI.size());
 
     // sorting both the lists
     cloudList = AnalyzePMI.bubblesort(cloudList);
