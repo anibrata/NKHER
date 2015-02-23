@@ -141,7 +141,6 @@ public class StripesPMI_InMapper extends Configured implements Tool {
   private static class MyMapper extends
       Mapper<LongWritable, Text, Text, HMapStIW> {
 
-    private final static HMapStIW hashMap = new HMapStIW();
     private final static Text KEY = new Text();
     private Map<String, HMapStIW> map;
     private static final int FLUSH_SIZE = 2000000;
@@ -172,23 +171,22 @@ public class StripesPMI_InMapper extends Configured implements Tool {
         if (keyTerm.length() == 0) {
           continue;
         }
-        hashMap.clear();
         for (int j = (i + 1); j < length; j++) {
           if (lineWords[j].length() == 0) {
             continue;
           }
-          // make the hashmap for the key
-          if (!hashMap.containsKey(lineWords[j])) {
-            hashMap.put(lineWords[j], 1);
-          }
-        }
-        // Add it above hashmap to the main one
-        if (map.containsKey(keyTerm)) {
-          HMapStIW tempMap = (HMapStIW) map.get(keyTerm).clone();
-          tempMap.plus(hashMap);
-          map.put(keyTerm, tempMap);
-        } else {
-          map.put(keyTerm, hashMap);
+            if (map.containsKey(keyTerm)) {
+                if (map.get(keyTerm).containsKey(lineWords[j])) {
+                    map.get(keyTerm).put(lineWords[j],
+                                         map.get(keyTerm).get(lineWords[j]) + 1);
+                } else {
+                    map.get(keyTerm).put(lineWords[j], 1);
+                }
+            } else {
+                HMapStIW newMap = new HMapStIW();
+                newMap.put(lineWords[j], 1);
+                map.put(keyTerm, newMap);
+            }
         }
       }
       flush(context, false);
