@@ -235,7 +235,7 @@ public class PairsPMI_InMapper extends Configured implements Tool {
       String path = System.getProperty("user.dir");
       Path pathToFile =
           new Path(
-              "/Users/nameshkher/Documents/Hadoop-WorkSpace/assignment2/pairsWordCount/part-r-00000");
+              "/user/hdedu6/Big_Data_Assignments/bigdata-assignments/assignment2/pairsWordCount/part-r-00000");
 
       BufferedReader bufferedReader = null;
       FSDataInputStream fsdis = null;
@@ -331,7 +331,7 @@ public class PairsPMI_InMapper extends Configured implements Tool {
                                                         // reduce job
     String path = System.getProperty("user.dir");
     String mapperOneOutputPath =
-        "/Users/nameshkher/Documents/Hadoop-WorkSpace/assignment2/pairsWordCount";
+        "/user/hdedu6/Big_Data_Assignments/bigdata-assignments/assignment2/pairsWordCount";
 
     Path path2 = new Path(mapperOneOutputPath);
 

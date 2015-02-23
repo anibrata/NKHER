@@ -203,15 +203,10 @@ public class StripesPMI_InMapper extends Configured implements Tool {
         }
       }
       // Flush as the size has exceeded
-      File file = new File("/Users/nameshkher/Desktop/output");
-      FileWriter fw = new FileWriter(file);
-      BufferedWriter bw = new BufferedWriter(fw);
       for (String key : map.keySet()) {
-        bw.write(key + "\t" + map.get(key) + "\n\n");
         KEY.set(key);
         context.write(KEY, map.get(key));
       }
-      bw.close();
       // Now clear the map !
       map.clear();
     }
@@ -256,7 +251,7 @@ public class StripesPMI_InMapper extends Configured implements Tool {
       String path = System.getProperty("user.dir");
       Path pathToFile =
           new Path(
-              "/Users/nameshkher/Documents/Hadoop-WorkSpace/assignment2/stripesWordCount/part-r-00000");
+              "/user/hdedu6/Big_Data_Assignments/bigdata-assignments/assignment2/stripesWordCount/part-r-00000");
 
       BufferedReader bufferedReader = null;
       FSDataInputStream fsdis = null;
@@ -356,7 +351,7 @@ public class StripesPMI_InMapper extends Configured implements Tool {
     String outputPath = cmdline.getOptionValue(OUTPUT);
     String path = System.getProperty("user.dir");
     String mapperOneOutputPath =
-        "/Users/nameshkher/Documents/Hadoop-WorkSpace/assignment2/stripesWordCount";
+        "/user/hdedu6/Big_Data_Assignments/bigdata-assignments/assignment2/stripesWordCount";
 
     Path path2 = new Path(mapperOneOutputPath);
 
