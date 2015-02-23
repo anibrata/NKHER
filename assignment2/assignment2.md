@@ -10,13 +10,13 @@ NORMAL IMPLEMENTATION
 For Bible Shakes
 ---------------------------
 
-0. 
+Answer 0. 
 Pairs Approach : The implementation has two jobs. First jobs Mapper params <LongWritable, Text, Text, IntWritable>. This does a Word Count per sentence. Reducer params <Text, IntWritable, Text, IntWritable>. The output is stored in a file which is read by the next job. The second job's Mapper params are <LongWritable, Text, PairOfStrings, DoubleWritable>. Mapper calculates the unique cooccurences in each line and outputs the pair and one as count per line. (There are no duplicate pairs as I am getting unique words in a line and sorting them by using a TreeSet in Java). The combiner params are <PairOfStrings, DoubleWritable, PairOfStrings, DoubleWritable> and does a key wise sum where the key is a pair of strings and sends to reducer. The Reducer params are <PairOfStrings, DoubleWritable, PairOfStrings, DoubleWritable>. The reducer in its setup() method reads the output of the first job and stores the word counts in a hash map (Loading Side data). The reduce function int he reducer calculates the total sum of pairs and then the pmi for them with the help of the hashmap created in the setup and emit's it!
 
 Stripes Approach : The implementation again has two jobs where. First job's Mapper params <LongWritable, Text, Text, IntWritable>. This does a Word Count per sentence. Reducer params <Text, IntWritable, Text, IntWritable>. The output is stored in a file which is read by the next job. The second job's Mapper params are <LongWritable, Text, PairOfStrings, DoubleWritable>. Mapper takes params <LongWritable, Text, Text, HMapStIW> and calculates a hashmap for each word in a sentence. The hashmap for each word/text contains all other unique words it coccurs with and value as 1. 
 For example if sentence is "Messi is a a football player" then it removes duplicates into a set <Messi is a football player> and then creates hashmap for each word eg for Messi the hashmap would be {is->1, a->, footballer->1, player->1}. The hashmap for the word "is" will not contain Messi as a key. Key values pairs in the form of (Text, HMapStIW) is passed to the combiners which does a sum and passed to the reducers (Using a TreeSet to sort the unique words of a sentence). The reducer setup method reads the output of the first mapper (dictionary) and stores it in a hashmap. This hashmap is used for individual word count in the reduce() method of the reducer to calculate PMI!
 
-1. With Combiner. Local Machine.
+Answer 1. With Combiner. Local Machine.
 Running time PairsPMI (Job 1 -> 4.807 and Job 2 -> 34.544 seconds) 
 
 JOB 1 --> Input Records -> 156215, Key Value Pairs -> 1531520, Output -> 41788 reduce o/p rec
@@ -27,7 +27,7 @@ Running Time StripesPMI ((Job 1 -> 4.82 and Job 2 -> 12.468 seconds)
 JOB 1 --> Input Records -> 156215, Key Value Pairs -> 1531520, Output -> 41788 reduce o/p rec
 JOB 2 --> Input Records -> 156215, Key Value Pairs -> 1531520, Output -> 116759 reduce o/p rec
 
-2. Running without combiners. Local Machine.
+Answer 2. Running without combiners. Local Machine.
 Running time PairsPMI (Job 1 -> 5.87 and Job 2 -> 39.531 seconds)
 
 JOB 1 --> Input Records -> 156215, Key Value Pairs -> 1531520, Output -> 41788 reduce o/p rec
@@ -38,12 +38,14 @@ Running Time StripesPMI (Job 1 -> 5.82 and Job 2 -> 14.46 seconds)
 JOB 1 --> Input Records -> 156215, Key Value Pairs -> 1531520, Output -> 41788 reduce o/p rec
 JOB 2 --> Input Records -> 156215, Key Value Pairs -> 1531520, Output -> 116759 reduce o/p rec
 
-3.  116759 distinct pairs.
+Answer 3.  116759 distinct pairs.
 
-4. Pair with highest PMI value is (meshach, shadrach) and its PMI value is 4.047594697476721. Having a large PMI between these two terms signifies that when you see either word you know more about the probability of seeing the other word. Or seeing "meshach" gives you highest information about seeing "shadrach". There are other Pairs also that have similar values which are :
+Answer 4. Pair with highest PMI value is (meshach, shadrach) and its PMI value is 4.047594697476721. Having a large PMI between these two terms signifies that when you see either word you know more about the probability of seeing the other word. Or seeing "meshach" gives you highest information about seeing "shadrach". There are other Pairs also that have similar values which are :
 (meshach, abednego) and (abednego, shadrach)
 
-5. TOP THREE WORDS WITH CLOUD
+Answer 5. 
+
+TOP THREE WORDS WITH CLOUD
 
 (cloud, tabernacle) 1.803635857731193
 (cloud, glory) 1.476112742132996
@@ -60,9 +62,9 @@ TOP THREE WORDS WITH LOVE
 For simplewiki-20141222-pages-articles.txt
 -------------------------------------------
 
-0. Same as bible+shakes
+Answer 0. Same as bible+shakes
 
-1. With Combiner
+Answer 1. With Combiner
 Running time Pairs (Job 1 -> 62.928 Job 2 -> 11552.575 seconds) Run on Cluster. With 1 Reducer.
 
 JOB 1 --> Input Records -> 114863, Key Value Pairs -> 11255671, Output -> 1064960 reduce o/p rec
@@ -73,16 +75,16 @@ Running Time Stripes (Job 1 -> 60.995 Job 2 -> 2845.837 seconds) Run on Cluster
 JOB 1 --> Input Records -> 114863, Key Value Pairs -> 11255671, Output -> 1064960 reduce o/p rec
 JOB 2 --> Input Records -> 114863, Key Value Pairs -> 11255671, Output -> 19105212 reduce o/p rec
 
-2. Running without combiners. 
+Answer 2. Running without combiners. 
 
 Running time Pairs (Job 1 ->  80.123 sec Job 2 -> 3124.23 seconds), Job 1 output -> 41788 reduce output records
 Running Time Stripes (Job 1 ->  63.245 Job 2 -> 3433.23 seconds), Job 2 output -> 116759 reduce output records 
 
 All other values are same as for the with combiner version.
 
-3. 19105212 distinct pairs.
+Answer 3. 19105212 distinct pairs.
 
-4. A lot of pairs shared the highest PMI value which are below.
+Answer 4. A lot of pairs shared the highest PMI value which are below.
 
 (gridcolor:lightgrey, id:darkgrey)    4.193722733154959
 (gridcolor:lightgrey, id:lightgrey)    4.193722733154959
@@ -95,7 +97,9 @@ All other values are same as for the with combiner version.
 (id:lightgrey, x.y)    4.193722733154959
 ((Pantone, TPX)    4.193722733154959
 
-5. TOP WORDS WITH CLOUD
+Answer 5. 
+
+TOP WORDS WITH CLOUD
 
 (cloud, nebula.)    2.657623618475959
 (cloud, cloud.)    2.61259664866264
@@ -128,7 +132,7 @@ TOP WORDS WITH LOVE
 IN MAPPER IMPLEMENTATION
 ------------------------	
 
-0. 
+Answer 0. 
 Pairs Approach : 
 
 JOB 1:
