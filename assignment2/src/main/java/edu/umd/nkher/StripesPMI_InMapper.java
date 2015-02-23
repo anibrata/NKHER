@@ -25,6 +25,7 @@ import org.apache.commons.cli.ParseException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DoubleWritable;
@@ -48,7 +49,7 @@ import tl.lin.data.pair.PairOfStrings;
 public class StripesPMI_InMapper extends Configured implements Tool {
 
   private static final Logger LOG = Logger.getLogger(StripesPMI_InMapper.class);
-  private static long numberOfLines = 0;
+  private static double N = 0;
 
   private static class WordCountSentenceMapper extends
       Mapper<LongWritable, Text, Text, IntWritable> {
@@ -221,9 +222,18 @@ public class StripesPMI_InMapper extends Configured implements Tool {
     @Override
     public void cleanup(Context context) throws IOException,
         InterruptedException {
-      long lines = context.getCounter(TaskCounter.MAP_INPUT_RECORDS).getValue();
-      numberOfLines += lines;
-      flush(context, true);
+      N = context.getCounter(TaskCounter.MAP_INPUT_RECORDS).getValue();
+      Configuration conf = new Configuration();
+      FileSystem fs = FileSystem.get(conf);
+      Path path =
+          new Path(
+              "/user/hdedu6/lines");
+      if (fs.exists(path)) {
+        fs.delete(path, true);
+      }
+      FSDataOutputStream out = fs.create(path);
+      out.writeDouble(N);
+      out.close();
     }
   }
 
@@ -233,13 +243,19 @@ public class StripesPMI_InMapper extends Configured implements Tool {
 
     private static final PairOfStrings PAIR_OF_WORDS = new PairOfStrings();
     private static final DoubleWritable PMI = new DoubleWritable();
-    Long long1 = new Long(numberOfLines);
-    private final double N = long1.doubleValue(); // number of sentences
     private static HashMap<String, Integer> dictionary =
         new HashMap<String, Integer>();
 
     @Override
     public void setup(Context context) throws IOException {
+
+      Configuration conf = new Configuration();
+      FileSystem fs = FileSystem.get(conf);
+      Path path1 =
+          new Path(
+              "/user/hdedu6/lines");
+      FSDataInputStream in = fs.open(path1);
+      N = in.readDouble();
 
       System.out.println("Number of lines : " + N);
       /*

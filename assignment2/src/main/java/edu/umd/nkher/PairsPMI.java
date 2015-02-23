@@ -25,6 +25,7 @@ import org.apache.commons.cli.ParseException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
@@ -51,7 +52,7 @@ import cern.colt.Arrays;
 public class PairsPMI extends Configured implements Tool {
 
   private static final Logger LOG = Logger.getLogger(PairsPMI.class);
-  private static long numberOfLines = 0;
+  private static double N = 0;
 
   private static class WordCountSentenceMapper extends
       Mapper<LongWritable, Text, Text, IntWritable> {
@@ -129,9 +130,19 @@ public class PairsPMI extends Configured implements Tool {
     }
 
     @Override
-    public void cleanup(Context context) {
-      long lines = context.getCounter(TaskCounter.MAP_INPUT_RECORDS).getValue();
-      numberOfLines += lines;
+    public void cleanup(Context context) throws IOException {
+      N = context.getCounter(TaskCounter.MAP_INPUT_RECORDS).getValue();
+      Configuration conf = new Configuration();
+      FileSystem fs = FileSystem.get(conf);
+      Path path =
+          new Path(
+              "/user/hdedu6/lines");
+      if (fs.exists(path)) {
+        fs.delete(path, true);
+      }
+      FSDataOutputStream out = fs.create(path);
+      out.writeDouble(N);
+      out.close();
     }
   }
 
@@ -157,13 +168,19 @@ public class PairsPMI extends Configured implements Tool {
 
     private static DoubleWritable PMI = new DoubleWritable();
     private static PairOfStrings PAIR = new PairOfStrings();
-    Long long1 = new Long(numberOfLines);
-    private final double N = long1.doubleValue(); // number of sentences
     private static Map<String, Integer> dictionary =
         new HashMap<String, Integer>();
 
     @Override
     public void setup(Context context) throws IOException {
+
+      Configuration conf = new Configuration();
+      FileSystem fs = FileSystem.get(conf);
+      Path path1 =
+          new Path(
+              "/user/hdedu6/lines");
+      FSDataInputStream in = fs.open(path1);
+      N = in.readDouble();
       System.out.println("Number of lines : " + N);
       /*
        * Here we will try to put the word counts from the previous run into the

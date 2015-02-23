@@ -1,8 +1,11 @@
 package edu.umd.nkher;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -21,6 +24,7 @@ import org.apache.commons.cli.ParseException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DoubleWritable;
@@ -46,7 +50,7 @@ import tl.lin.data.pair.PairOfStrings;
 public class StripesPMI extends Configured implements Tool {
 
   private static final Logger LOG = Logger.getLogger(StripesPMI.class);
-  private static long numberOfLines = 0;
+  private static double N = 0;
   
   private static class WordCountSentenceMapper extends
       Mapper<LongWritable, Text, Text, IntWritable> {
@@ -88,6 +92,7 @@ public class StripesPMI extends Configured implements Tool {
     }
   }
 
+
   private static class MyMapper extends
       Mapper<LongWritable, Text, Text, HMapStIW> {
     private final static HMapStIW hashMap = new HMapStIW();
@@ -127,10 +132,20 @@ public class StripesPMI extends Configured implements Tool {
     }
 
     @Override
-    public void cleanup(Context context) {
-      long lines =
- context.getCounter(TaskCounter.MAP_INPUT_RECORDS).getValue();
-      numberOfLines += lines;
+    public void cleanup(Context context) throws IOException {
+      N =
+          context.getCounter(TaskCounter.MAP_INPUT_RECORDS).getValue();
+      Configuration conf = new Configuration();
+      FileSystem fs = FileSystem.get(conf);
+      Path path =
+          new Path(
+              "/user/hdedu6/lines");
+      if (fs.exists(path)) {
+        fs.delete(path, true);
+      }
+      FSDataOutputStream out = fs.create(path);
+      out.writeDouble(N);
+      out.close();
     }
   }
 
@@ -154,15 +169,21 @@ public class StripesPMI extends Configured implements Tool {
 
     private static final PairOfStrings PAIR_OF_WORDS = new PairOfStrings();
     private static final DoubleWritable PMI = new DoubleWritable();
-    Long long1 = new Long(numberOfLines);
-    private final double N = long1.doubleValue(); // number of sentences
     private static HashMap<String, Integer> dictionary =
         new HashMap<String, Integer>();
 
     @Override
     public void setup(Context context) throws IOException {
 
-      System.out.println("Number of lines : " + N);
+      Configuration conf = new Configuration();
+      FileSystem fs = FileSystem.get(conf);
+      Path path1 =
+          new Path(
+              "/user/hdedu6/lines");
+      FSDataInputStream in = fs.open(path1);
+      N = in.readDouble();
+
+      System.out.println("Lines are : " + N);
       /*
        * now we have to populate the dictionary to get the individual word
        * counts which is the output of the first mapper
