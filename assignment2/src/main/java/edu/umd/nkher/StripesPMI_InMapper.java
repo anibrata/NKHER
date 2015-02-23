@@ -222,6 +222,7 @@ public class StripesPMI_InMapper extends Configured implements Tool {
     @Override
     public void cleanup(Context context) throws IOException,
         InterruptedException {
+      flush(context, true); // flush over here no matter what
       N = context.getCounter(TaskCounter.MAP_INPUT_RECORDS).getValue();
       Configuration conf = new Configuration();
       FileSystem fs = FileSystem.get(conf);
