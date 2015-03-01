@@ -14,20 +14,39 @@ Question 3. Which articles in simplewiki-20141222-pages-articles.txt satisfy the
 
 Printing the first 80 characters for the output. (With postfix notation)
 
-Query is : outrageous fortune AND</br></br>
+Query is : outrageous fortune AND
+----------------------------------------------------------------
+
+
 40366757    The Wheel of Fortune    :For other uses, see Wheel of Fortune. The Wheel of Fortune</br>
 
-Query is : means deceit AND</br></br>
-19334430	StarCraft	StarCraft is a real-time strategy game for the PC. It was created in 1</br>
+
+Query is : means deceit AND
+----------------------------------------------------------------
+
+
+19334430	StarCraft	StarCraft is a real-time strategy game for the PC. It was created in 1
+
 111918585	List of figures in Greek mythology	This is a list of gods, goddesses, people and</br>
 
-Query is : white red OR rose AND pluck AND</br>
+
+Query is : white red OR rose AND pluck AND
+----------------------------------------------------------------
+
 
 (No line is present for this line)
 
-Query is : unhappy outrageous OR good your AND OR fortune AND</br></br>
-29136931	Battle of Bannockburn	The Battle of Bannockburn, fought on 23 and 24 June 1314, </br>
-40366757	The Wheel of Fortune	:For other uses, see Wheel of Fortune. The Wheel of Fortune </br>
-45397900	Arthur (TV series)	Arthur is a Canadian/American animated educational television </br>
-70161822	Cecilia (novel)	Cecilia, subtitled "Memoirs of an Heiress", is an 18th century n </br>
-121258440	Amulet of Thailand	Amulets of Thailand are something that Thai people have worn </br>
+
+Query is : unhappy outrageous OR good your AND OR fortune AND
+----------------------------------------------------------------
+
+29136931	Battle of Bannockburn	The Battle of Bannockburn, fought on 23 and 24 June 1314,
+
+40366757	The Wheel of Fortune	:For other uses, see Wheel of Fortune. The Wheel of Fortune 
+
+45397900	Arthur (TV series)	Arthur is a Canadian/American animated educational television 
+
+70161822	Cecilia (novel)	Cecilia, subtitled "Memoirs of an Heiress", is an 18th century n 
+
+121258440	Amulet of Thailand	Amulets of Thailand are something that Thai people have worn 
+
