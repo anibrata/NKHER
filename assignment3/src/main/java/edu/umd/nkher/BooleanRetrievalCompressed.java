@@ -62,9 +62,8 @@ public class BooleanRetrievalCompressed extends Configured implements Tool {
     Set<Integer> answerSet = answerStack.pop();
     for (Integer i : answerSet) {
       String line = fetchLine(i);
-      if (line.length() <= 80) { // checking for 80 characters
-        System.out.println(i + "\t" + line);
-      }
+      line = line.substring(0, 80);
+      System.out.println(i + "\t" + line);
     }
   }
 
