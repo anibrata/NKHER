@@ -62,7 +62,9 @@ public class BooleanRetrievalCompressed extends Configured implements Tool {
     Set<Integer> answerSet = answerStack.pop();
     for (Integer i : answerSet) {
       String line = fetchLine(i);
-      line = line.substring(0, 80);
+        if (line.length() >= 80) {
+            line = line.substring(0, 80);
+        }
       System.out.println(i + "\t" + line);
     }
   }
