@@ -4,7 +4,7 @@ Assignment 3 Answers
 
 Question 1. What is the size of your compressed index for bible+shakes.nopunc?
 
-Size of compressed index is 6.7 mb.
+Size of compressed index is 6.6 mb.
 
 Question 2. What is the size of your compressed index for simplewiki-20141222-pages-articles.txt?
 
