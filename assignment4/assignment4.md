@@ -66,7 +66,7 @@ hadoop jar target/assignment4-1.0-SNAPSHOT-fatjar.jar edu.umd.nkher.BuildPersona
 hadoop fs -mkdir nameshkher-PageRank
 
 <b>Step4-</b>
-hadoop jar target/assignment4-1.0-SNAPSHOT-fatjar.jar edu.umd.nkher.PartitionGraph -input nameshkher-PageRankRecords -output nkher-PageRank/iter0000 -numPartitions 5 -numNodes 1458
+hadoop jar target/assignment4-1.0-SNAPSHOT-fatjar.jar edu.umd.nkher.PartitionGraph -input nameshkher-PageRankRecords -output nameshkher-PageRank/iter0000 -numPartitions 5 -numNodes 1458
 
 <b>Step5-</b>
 hadoop jar target/assignment4-1.0-SNAPSHOT-fatjar.jar edu.umd.nkher.RunPersonalizedPageRankBasic -base nameshkher-PageRank -numNodes 1458 -start 0 -end 20 -sources 9470136,9300650
