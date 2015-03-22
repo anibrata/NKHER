@@ -83,16 +83,6 @@
       <version>2.0.0</version>
     </dependency>
     <dependency>
-        <groupId>org.apache.hadoop</groupId>
-        <artifactId>hadoop-client</artifactId>
-        <version>2.5.0-cdh5.3.0</version>
-    </dependency>
-    <dependency>
-        <groupId>edu.umd</groupId>
-        <artifactId>cloud9</artifactId>
-        <version>2.0.0</version>
-    </dependency>
-    <dependency>
         <groupId>tl.lin</groupId>
         <artifactId>lintools-datatypes</artifactId>
         <version>1.0.0</version>
