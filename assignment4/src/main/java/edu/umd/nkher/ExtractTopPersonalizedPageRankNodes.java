@@ -85,7 +85,7 @@ public class ExtractTopPersonalizedPageRankNodes extends Configured implements T
         new ArrayList<TopScoredObjects<Integer>>();
     // We need one queue for each source
     for (int i = 0; i < numberOfSources; i++) {
-      listOfQueues.add(new TopScoredObjects<>(n));
+      listOfQueues.add(new TopScoredObjects<Integer>(n));
     }
 
     // Working over here
