@@ -67,6 +67,9 @@ public class BooleanRetrievalHBase extends Configured implements Tool {
 		Set<Integer> set = stack.pop();
 		for (Integer i : set) {
 			String line = fetchLine(i);
+            if (line.length() >= 100) {
+                line = line.substring(0, 100);
+            }
 			System.out.println(i + "\t" + line);
 		}
 	}
