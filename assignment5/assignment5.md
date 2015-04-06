@@ -32,9 +32,14 @@ Alternatively, we can also modify the row key so that all the information is sto
 
 Row Key -> docno + term
 
-The column family hence can be shortened to say "f" which signifies that it only stores the frequency of the term. Shortening the column family would reduce the I/O load for both the disk and network. Now inorder to get a list of all the words in a particular document we would have to do a short SCAN instead of a GET operation. Also, deleting a word from a document would only be a simple delete operation from the table. We do not need to iterate over the entire row (posting list) as in the earlier designs. We can use MD5 hashing for getting fixed row key lengths.
+The column family hence can be shortened to say "f" which signifies that it only stores the frequency of the term. Shortening the column family would reduce the I/O load for both the disk and network. The column qualifier would be the docno with term frequency as the value. Now inorder to get a list of all the words in a particular document we would have to do a short SCAN instead of a GET operation. Also, deleting a word from a document would only be a simple delete operation from the table. We do not need to iterate over the entire row (posting list) as in the earlier designs. 
 
+{
+    "docno1+term1": { "docno1": "termFreq" },
+    "docno2+term1": { "docno2": "termFreq" }
+}
 
+We can use MD5 hashing for getting fixed row key lengths.
 
 
 COMMANDS TO RUN THE ASSIGNMENT
