@@ -93,11 +93,12 @@ sortedReducedDates.saveAsTextFile("hourly-counts-spark-all")
 
 
 val tweets = sc.textFile("/shared/tweets2011.txt")
+
 val tweets_splitByLines = tweets.flatMap(line => line.split("\n"))
 
 val regexp = ".*([Ee][Gg][Yy][Pp][Tt]|[Cc][Aa][Ii][Rr][Oo]).*".r
 
-val filteredTweets = tweets_splitByLines.flatMap(line => regexp.findAllIn(line))
+val filteredTweets = tweets_splitByLines.flatMap(line => regexp.findAllIn(line(4)))
 
 val filteredTweets_splitByTab = filteredTweets.map(l => l.split("\t")).filter(l => !(l.length < 4))
 
