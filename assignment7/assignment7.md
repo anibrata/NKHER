@@ -111,7 +111,7 @@ val CONTENT_SPLIT = CONTENT.flatMap(line => line.split("\n"))
 
 val CONTENT_SPLITBYTAB = CONTENT_SPLIT.map(l => l.split("\t")).filter(l => !(l.length < 4))
 
-val REGEXP_PATTERN = ".*([Ee][Gg][Yy][Pp][Tt]|[Cc][Aa][Ii][Rr][Oo]).*".r
+val REGEXP_PATTERN = ".\*([Ee][Gg][Yy][Pp][Tt]|[Cc][Aa][Ii][Rr][Oo]).\*".r
 
 val FILTERED_CONTENT = CONTENT_SPLITBYTAB.map(line => if (REGEXP_PATTERN.pattern.matcher(line(3)).matches) { line } else { null }).filter(line => line != null)
 
