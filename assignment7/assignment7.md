@@ -77,65 +77,62 @@ Spark Scripts
 
 <h4><u><i>Script for Question 1</i></u></h4>
 
-val tweets = sc.textFile("/shared/tweets2011.txt")
+val CONTENT = sc.textFile("/shared/tweets2011.txt")
 
-val tweets_splitByLines = tweets.flatMap(line => line.split("\n"))
+val CONTENT_SPLIT = CONTENT.flatMap(line => line.split("\n"))
 
-val tweets_splitByTab = tweets_splitByLines.map(l => l.split("\t")).filter(l => !(l.length < 4))
+val CONTENT_SPLIT_BY_TAB = CONTENT_SPLIT.map(l => l.split("\t")).filter(l => !(l.length < 4))
 
-val cal = java.util.Calendar.getInstance();
+val CALENDAR_OBJ = java.util.Calendar.getInstance();
 
-cal.setTimeZone(java.util.TimeZone.getTimeZone("GMT"))
+CALENDAR_OBJ.setTimeZone(java.util.TimeZone.getTimeZone("GMT"))
 
-val tweetDates = tweets_splitByTab.map(l => cal.setTime(new java.util.Date( l(2) )))
+val DATES = CONTENT_SPLIT_BY_TAB.map(l => CALENDAR_OBJ.setTime(new java.util.Date( l(2) )))
 
+val DATES_EDITTED = DATES.map(l => (new String( (CALENDAR_OBJ.get(java.util.Calendar.MONTH)+1) + "/" + CALENDAR_OBJ.get(java.util.Calendar.DAY_OF_MONTH)),
+if (CALENDAR_OBJ.get(java.util.Calendar.HOUR_OF_DAY) <= 9) "0"+(CALENDAR_OBJ.get(java.util.Calendar.HOUR_OF_DAY)).toString else CALENDAR_OBJ.get(java.util.Calendar.HOUR_OF_DAY).toString ) )
 
-val formattedDates = tweetDates.map(l => (new String( (cal.get(java.util.Calendar.MONTH)+1) + "/" + cal.get(java.util.Calendar.DAY_OF_MONTH)),
-if (cal.get(java.util.Calendar.HOUR_OF_DAY) <= 9) "0"+(cal.get(java.util.Calendar.HOUR_OF_DAY)).toString else cal.get(java.util.Calendar.HOUR_OF_DAY).toString ) )
+val DATES_REDUCED = DATES_EDITTED.map(tweets => (tweets, 1)).reduceByKey(_ + _)
 
+val DATES_SORTED = DATES_REDUCED.sortByKey()
 
-val reduceDates = formattedDates.map(tweets => (tweets, 1)).reduceByKey(_ + _)
+DATES_SORTED.collect()
 
-val sortedReducedDates = reduceDates.sortByKey()
+DATES_SORTED.count()
 
-sortedReducedDates.collect()
-
-sortedReducedDates.saveAsTextFile("hourly-counts-spark-all")
+DATES_SORTED.saveAsTextFile("hourly-counts-spark-all")
 
 
 <h4><u><i>Script for Question 2</i></u></h4>
 
 
-val tweets = sc.textFile("/shared/tweets2011.txt")
+val CONTENT = sc.textFile("/shared/tweets2011.txt")
 
-val regexp = ".\*([Ee][Gg][Yy][Pp][Tt]|[Cc][Aa][Ii][Rr][Oo]).\*".r
+val REGEXP_PATTERN = ".*([Ee][Gg][Yy][Pp][Tt]|[Cc][Aa][Ii][Rr][Oo]).*".r
 
-val filteredTweets = tweets.map(line => if (regexp.pattern.matcher(line).matches) { line } else { null }).filter(line => line != null)
+val FILTERED_CONTENT = CONTENT.map(line => if (REGEXP_PATTERN.pattern.matcher(line).matches) { line } else { null }).filter(line => line != null)
 
-val tweets_splitByLines = filteredTweets.flatMap(line => line.split("\n"))
+val CONTENT_SPLIT = FILTERED_CONTENT.flatMap(line => line.split("\n"))
 
-val filteredTweets_splitByTab = tweets_splitByLines.map(l => l.split("\t")).filter(l => !(l.length < 4))
+val CONTENT_SPLITBYTAB = CONTENT_SPLIT.map(l => l.split("\t")).filter(l => !(l.length < 4))
 
-val cal = java.util.Calendar.getInstance();
+val CALENDAR_OBJ = java.util.Calendar.getInstance();
 
-cal.setTimeZone(java.util.TimeZone.getTimeZone("GMT"))
+CALENDAR_OBJ.setTimeZone(java.util.TimeZone.getTimeZone("GMT"))
 
-val tweetDates = filteredTweets_splitByTab.map(l => cal.setTime(new java.util.Date( l(2) )))
+val DATES = CONTENT_SPLITBYTAB.map(l => CALENDAR_OBJ.setTime(new java.util.Date( l(2) )))
 
-val formattedDates = tweetDates.map(l => (new String( (cal.get(java.util.Calendar.MONTH)+1) + "/" + cal.get(java.util.Calendar.DAY_OF_MONTH)),
-if (cal.get(java.util.Calendar.HOUR_OF_DAY) <= 9) "0"+(cal.get(java.util.Calendar.HOUR_OF_DAY)).toString else cal.get(java.util.Calendar.HOUR_OF_DAY).toString ) )
+val DATES_EDITTED = DATES.map(l => (new String( (CALENDAR_OBJ.get(java.util.Calendar.MONTH)+1) + "/" + CALENDAR_OBJ.get(java.util.Calendar.DAY_OF_MONTH)),
+if (CALENDAR_OBJ.get(java.util.Calendar.HOUR_OF_DAY) <= 9) "0"+(CALENDAR_OBJ.get(java.util.Calendar.HOUR_OF_DAY)).toString else CALENDAR_OBJ.get(java.util.Calendar.HOUR_OF_DAY).toString ) )
 
-val reduceDates = formattedDates.map(tweets => (tweets, 1)).reduceByKey(_ + _)
+val DATES_REDUCED = DATES_EDITTED.map(tweets => (tweets, 1)).reduceByKey(_ + _)
 
-val sortedReducedDates = reduceDates.sortByKey()
+val DATES_SORTED = DATES_REDUCED.sortByKey()
 
-sortedReducedDates.collect()
+DATES_SORTED.collect()
 
-sortedReducedDates.count()
+DATES_SORTED.count()
 
-sortedReducedDates.saveAsTextFile("hourly-counts-spark-egypt")
-
-
-
+DATES_SORTED.saveAsTextFile("hourly-counts-spark-egypt")
 
 <h3>Output is stored in part files in the respective folders.</h3>
