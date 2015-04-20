@@ -87,9 +87,12 @@ val cal = java.util.Calendar.getInstance();
 
 cal.setTimeZone(java.util.TimeZone.getTimeZone("GMT"))
 
-val tweetDates = tweets_splitByTab.map(l => cal.setTime(new java.util.Date( l(2) ))).filter(l => l != null)
+val tweetDates = tweets_splitByTab.map(l => cal.setTime(new java.util.Date( l(2) )))
 
-val formattedDates = tweetDates.map(l => (new String( (cal.get(java.util.Calendar.MONTH)+1) + "/" + cal.get(java.util.Calendar.DAY_OF_MONTH)), (cal.get(java.util.Calendar.HOUR_OF_DAY)) ))
+
+val formattedDates = tweetDates.map(l => (new String( (cal.get(java.util.Calendar.MONTH)+1) + "/" + cal.get(java.util.Calendar.DAY_OF_MONTH)),
+if (cal.get(java.util.Calendar.HOUR_OF_DAY) <= 9) "0"+(cal.get(java.util.Calendar.HOUR_OF_DAY)).toString else cal.get(java.util.Calendar.HOUR_OF_DAY).toString ) )
+
 
 val reduceDates = formattedDates.map(tweets => (tweets, 1)).reduceByKey(_ + _)
 
