@@ -105,7 +105,7 @@ sortedReducedDates.saveAsTextFile("hourly-counts-spark-all")
 
 val tweets = sc.textFile("/shared/tweets2011.txt")
 
-val regexp = ".*([Ee][Gg][Yy][Pp][Tt]|[Cc][Aa][Ii][Rr][Oo]).*".r
+val regexp = ".\*([Ee][Gg][Yy][Pp][Tt]|[Cc][Aa][Ii][Rr][Oo]).\*".r
 
 tweets filter (line => regexp.pattern.matcher(line).matches)
 
