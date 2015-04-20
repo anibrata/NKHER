@@ -12,7 +12,7 @@ a = load '/shared/tweets2011.txt' AS (tweetId:long, userId:chararray, date:chara
 
 a = FILTER a by ($0 is not null) AND ($1 is not null) AND ($2 is not null) AND ($3 is not null);
 
-b = FOREACH a GENERATE ToDate(date,'EEE MMM d HH:mm:ss Z yyyy') AS date,userId,text,tweetId;
+b = FOREACH a GENERATE ToDate(date,'EEE MMM d HH:mm:ss Z yyyy', 'GMT') AS date,userId,text,tweetId;
 
 c = foreach b {  
 
@@ -31,6 +31,7 @@ e = foreach d generate group as dateTimeHour, COUNT(c) as count;
 
 store e into 'hourly-counts-pig-all';
 
+dump e;
 
 <h4><u><i>Script for Question 2</i></u></h4>
 
@@ -38,7 +39,7 @@ a = load '/shared/tweets2011.txt' AS (tweetId:long, userId:chararray, date:chara
 
 a = FILTER a by ($0 is not null) AND ($1 is not null) AND ($2 is not null) AND ($3 is not null);
 
-b = FOREACH a GENERATE ToDate(date,'EEE MMM d HH:mm:ss Z yyyy') AS date,userId,text,tweetId;
+b = FOREACH a GENERATE ToDate(date,'EEE MMM d HH:mm:ss Z yyyy', 'GMT') AS date,userId,text,tweetId;
 
 b = FILTER b BY (text matches '.*([Ee][Gg][Yy][Pp][Tt]|[Cc][Aa][Ii][Rr][Oo]).*' );
 
@@ -59,6 +60,7 @@ e = foreach d generate group as dateTimeHour, COUNT(c) as count;
 
 store e into 'hourly-counts-pig-egypt';
 
+dump e;
 
 Spark Scripts 
 --------------
@@ -94,11 +96,23 @@ sortedReducedDates.saveAsTextFile("hourly-counts-spark-all")
 
 val tweets = sc.textFile("/shared/tweets2011.txt")
 
-val tweets_splitByLines = tweets.flatMap(line => line.split("\n"))
-
 val regexp = ".*([Ee][Gg][Yy][Pp][Tt]|[Cc][Aa][Ii][Rr][Oo]).*".r
 
-val filteredTweets = tweets_splitByLines.flatMap(line => regexp.findAllIn(line(4)))
+tweets filter (line => regexp.pattern.matcher(line).matches)
+
+val filteredTweets = tweets.map(line => regexp.findAllIn(line))
+
+val filteredTweets = tweets.map(line =>
+if (regexp.pattern.matcher(line).matches) {
+    line
+}
+else {
+    null
+}).filter(line => line != null)
+
+
+
+val tweets_splitByLines = tweets.flatMap(line => line.split("\n"))
 
 val filteredTweets_splitByTab = filteredTweets.map(l => l.split("\t")).filter(l => !(l.length < 4))
 
