@@ -92,7 +92,7 @@ val DATES = CONTENT_SPLIT_BY_TAB.map(l => CALENDAR_OBJ.setTime(new java.util.Dat
 val DATES_EDITTED = DATES.map(l => (new String( (CALENDAR_OBJ.get(java.util.Calendar.MONTH)+1) + "/" + CALENDAR_OBJ.get(java.util.Calendar.DAY_OF_MONTH)),
 if (CALENDAR_OBJ.get(java.util.Calendar.HOUR_OF_DAY) <= 9) "0"+(CALENDAR_OBJ.get(java.util.Calendar.HOUR_OF_DAY)).toString else CALENDAR_OBJ.get(java.util.Calendar.HOUR_OF_DAY).toString ) )
 
-val DATES_REDUCED = DATES_EDITTED.map(tweets => (tweets, 1)).reduceByKey(_ + _)
+val DATES_REDUCED = DATES_EDITTED.map(line => (line, 1)).reduceByKey(_ + _)
 
 val DATES_SORTED = DATES_REDUCED.sortByKey()
 
@@ -105,27 +105,26 @@ DATES_SORTED.saveAsTextFile("hourly-counts-spark-all")
 
 <h4><u><i>Script for Question 2</i></u></h4>
 
-
 val CONTENT = sc.textFile("/shared/tweets2011.txt")
+
+val CONTENT_SPLIT = CONTENT.flatMap(line => line.split("\n"))
+
+val CONTENT_SPLITBYTAB = CONTENT_SPLIT.map(l => l.split("\t")).filter(l => !(l.length < 4))
 
 val REGEXP_PATTERN = ".*([Ee][Gg][Yy][Pp][Tt]|[Cc][Aa][Ii][Rr][Oo]).*".r
 
-val FILTERED_CONTENT = CONTENT.map(line => if (REGEXP_PATTERN.pattern.matcher(line).matches) { line } else { null }).filter(line => line != null)
-
-val CONTENT_SPLIT = FILTERED_CONTENT.flatMap(line => line.split("\n"))
-
-val CONTENT_SPLITBYTAB = CONTENT_SPLIT.map(l => l.split("\t")).filter(l => !(l.length < 4))
+val FILTERED_CONTENT = CONTENT_SPLITBYTAB.map(line => if (REGEXP_PATTERN.pattern.matcher(line(3)).matches) { line } else { null }).filter(line => line != null)
 
 val CALENDAR_OBJ = java.util.Calendar.getInstance();
 
 CALENDAR_OBJ.setTimeZone(java.util.TimeZone.getTimeZone("GMT"))
 
-val DATES = CONTENT_SPLITBYTAB.map(l => CALENDAR_OBJ.setTime(new java.util.Date( l(2) )))
+val DATES = FILTERED_CONTENT.map(l => CALENDAR_OBJ.setTime(new java.util.Date( l(2) )))
 
 val DATES_EDITTED = DATES.map(l => (new String( (CALENDAR_OBJ.get(java.util.Calendar.MONTH)+1) + "/" + CALENDAR_OBJ.get(java.util.Calendar.DAY_OF_MONTH)),
 if (CALENDAR_OBJ.get(java.util.Calendar.HOUR_OF_DAY) <= 9) "0"+(CALENDAR_OBJ.get(java.util.Calendar.HOUR_OF_DAY)).toString else CALENDAR_OBJ.get(java.util.Calendar.HOUR_OF_DAY).toString ) )
 
-val DATES_REDUCED = DATES_EDITTED.map(tweets => (tweets, 1)).reduceByKey(_ + _)
+val DATES_REDUCED = DATES_EDITTED.map(line => (line, 1)).reduceByKey(_ + _)
 
 val DATES_SORTED = DATES_REDUCED.sortByKey()
 
