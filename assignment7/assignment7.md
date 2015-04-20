@@ -8,59 +8,68 @@ Pig Scripts
 
 <h4><u><i>Script for Question 1</i></u></h4>
 
-a = load '/shared/tweets2011.txt' AS (tweetId:long, userId:chararray, date:chararray, text:chararray);
+A = load '/shared/tweets2011.txt' AS (tweetId:long, userId:chararray, date:chararray, text:chararray);
 
-a = FILTER a by ($0 is not null) AND ($1 is not null) AND ($2 is not null) AND ($3 is not null);
+A = FILTER A by ($0 IS NOT NULL) AND ($1 IS NOT NULL) AND ($2 IS NOT NULL) AND ($3 IS NOT NULL);
 
-b = FOREACH a GENERATE ToDate(date,'EEE MMM d HH:mm:ss Z yyyy', 'GMT') AS date,userId,text,tweetId;
+B = FOREACH A GENERATE ToDate(date,'EEE MMM d HH:mm:ss Z yyyy', 'GMT') AS date,userId,text,tweetId;
 
-c = foreach b {  
+C = FOREACH B {
 
-month = (chararray)GetMonth(date);                         
-day = (chararray)GetDay(date);
-hour = (chararray) GetHour(date);
-generate CONCAT(CONCAT(CONCAT(month,'/'),CONCAT(day,' ')),hour) as modifiedDateTime;                                
+MONTH = (chararray)GetMonth(date);
+
+DAY = (chararray)GetDay(date); 
+
+HOUR = (int) GetHour(date);
+
+GENERATE CONCAT(CONCAT(MONTH,'/'),CONCAT(DAY,' ')) AS md, ( HOUR<=9 ? CONCAT('0',(chararray)HOUR):(chararray)HOUR ) AS h;
 
 };
 
-d = group c by modifiedDateTime;
+D = GROUP C BY (md, h);
 
-d = order d by group ASC;
+D = ORDER D BY group ASC;
 
-e = foreach d generate group as dateTimeHour, COUNT(c) as count;
+E = FOREACH D GENERATE group AS dateTimeHour, COUNT(C) AS count;
 
-store e into 'hourly-counts-pig-all';
+STORE E INTO 'hourly-counts-pig-all';
 
-dump e;
+DUMP E;
+
 
 <h4><u><i>Script for Question 2</i></u></h4>
 
-a = load '/shared/tweets2011.txt' AS (tweetId:long, userId:chararray, date:chararray, text:chararray);
 
-a = FILTER a by ($0 is not null) AND ($1 is not null) AND ($2 is not null) AND ($3 is not null);
+A = load '/shared/tweets2011.txt' AS (tweetId:long, userId:chararray, date:chararray, text:chararray);
 
-b = FOREACH a GENERATE ToDate(date,'EEE MMM d HH:mm:ss Z yyyy', 'GMT') AS date,userId,text,tweetId;
+A = FILTER A by ($0 IS NOT NULL) AND ($1 IS NOT NULL) AND ($2 IS NOT NULL) AND ($3 IS NOT NULL);
 
-b = FILTER b BY (text matches '.*([Ee][Gg][Yy][Pp][Tt]|[Cc][Aa][Ii][Rr][Oo]).*' );
+B = FOREACH A GENERATE ToDate(date,'EEE MMM d HH:mm:ss Z yyyy', 'GMT') AS date,userId,text,tweetId;
 
-c = foreach b {  
+B = FILTER B BY (text matches '.([Ee][Gg][Yy][Pp][Tt]|[Cc][Aa][Ii][Rr][Oo]).' );
 
-month = (chararray)GetMonth(date);                         
-day = (chararray)GetDay(date);
-hour = (chararray) GetHour(date);
-generate CONCAT(CONCAT(CONCAT(month,'/'),CONCAT(day,' ')),hour) as modifiedDateTime;                                
+C = FOREACH B {
+
+MONTH = (chararray)GetMonth(date);
+
+DAY = (chararray)GetDay(date); 
+
+HOUR = (int) GetHour(date);
+
+GENERATE CONCAT(CONCAT(MONTH,'/'),CONCAT(DAY,' ')) AS md, ( HOUR<=9 ? CONCAT('0',(chararray)HOUR):(chararray)HOUR ) AS h;
 
 };
 
-d = group c by modifiedDateTime;
+D = GROUP C BY (md, h);
 
-d = order d by group ASC;
+D = ORDER D BY group ASC;
 
-e = foreach d generate group as dateTimeHour, COUNT(c) as count;
+E = FOREACH D GENERATE group AS dateTimeHour, COUNT(C) AS count;
 
-store e into 'hourly-counts-pig-egypt';
+STORE E INTO 'hourly-counts-pig-all';
 
-dump e;
+DUMP E;
+
 
 Spark Scripts 
 --------------
