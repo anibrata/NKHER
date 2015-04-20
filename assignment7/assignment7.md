@@ -46,7 +46,7 @@ A = FILTER A by ($0 IS NOT NULL) AND ($1 IS NOT NULL) AND ($2 IS NOT NULL) AND (
 
 B = FOREACH A GENERATE ToDate(date,'EEE MMM d HH:mm:ss Z yyyy', 'GMT') AS date,userId,text,tweetId;
 
-B = FILTER B BY (text matches '.([Ee][Gg][Yy][Pp][Tt]|[Cc][Aa][Ii][Rr][Oo]).' );
+B = FILTER B BY (text matches '.*([Ee][Gg][Yy][Pp][Tt]|[Cc][Aa][Ii][Rr][Oo]).*' );
 
 C = FOREACH B {
 
