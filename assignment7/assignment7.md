@@ -89,7 +89,7 @@ cal.setTimeZone(java.util.TimeZone.getTimeZone("GMT"))
 
 val tweetDates = tweets_splitByTab.map(l => cal.setTime(new java.util.Date( l(2) ))).filter(l => l != null)
 
-val formattedDates = tweetDates.map(l => (new String( (new java.text.SimpleDateFormat("M").format(cal.getTime())) + "/" + cal.get(java.util.Calendar.DAY_OF_MONTH)), (cal.get(java.util.Calendar.HOUR_OF_DAY)) ))
+val formattedDates = tweetDates.map(l => (new String( (cal.get(java.util.Calendar.MONTH)+1) + "/" + cal.get(java.util.Calendar.DAY_OF_MONTH)), (cal.get(java.util.Calendar.HOUR_OF_DAY)) ))
 
 val reduceDates = formattedDates.map(tweets => (tweets, 1)).reduceByKey(_ + _)
 
@@ -107,23 +107,11 @@ val tweets = sc.textFile("/shared/tweets2011.txt")
 
 val regexp = ".\*([Ee][Gg][Yy][Pp][Tt]|[Cc][Aa][Ii][Rr][Oo]).\*".r
 
-tweets filter (line => regexp.pattern.matcher(line).matches)
+val filteredTweets = tweets.map(line => if (regexp.pattern.matcher(line).matches) { line } else { null }).filter(line => line != null)
 
-val filteredTweets = tweets.map(line => regexp.findAllIn(line))
+val tweets_splitByLines = filteredTweets.flatMap(line => line.split("\n"))
 
-val filteredTweets = tweets.map(line =>
-if (regexp.pattern.matcher(line).matches) {
-    line
-}
-else {
-    null
-}).filter(line => line != null)
-
-
-
-val tweets_splitByLines = tweets.flatMap(line => line.split("\n"))
-
-val filteredTweets_splitByTab = filteredTweets.map(l => l.split("\t")).filter(l => !(l.length < 4))
+val filteredTweets_splitByTab = tweets_splitByLines.map(l => l.split("\t")).filter(l => !(l.length < 4))
 
 val cal = java.util.Calendar.getInstance();
 
@@ -131,13 +119,15 @@ cal.setTimeZone(java.util.TimeZone.getTimeZone("GMT"))
 
 val tweetDates = filteredTweets_splitByTab.map(l => cal.setTime(new java.util.Date( l(2) )))
 
-val formattedDates = tweetDates.map(l => (new String( (new java.text.SimpleDateFormat("M").format(cal.getTime())) + "/" + cal.get(java.util.Calendar.DAY_OF_MONTH)), (cal.get(java.util.Calendar.HOUR_OF_DAY)) ))
+val formattedDates = tweetDates.map(l => (new String( (cal.get(java.util.Calendar.MONTH)+1) + "/" + cal.get(java.util.Calendar.DAY_OF_MONTH)), (cal.get(java.util.Calendar.HOUR_OF_DAY)) ))
 
 val reduceDates = formattedDates.map(tweets => (tweets, 1)).reduceByKey(_ + _)
 
 val sortedReducedDates = reduceDates.sortByKey()
 
 sortedReducedDates.collect()
+
+sortedReducedDates.count()
 
 sortedReducedDates.saveAsTextFile("hourly-counts-spark-egypt")
 
