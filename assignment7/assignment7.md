@@ -66,7 +66,7 @@ D = ORDER D BY group ASC;
 
 E = FOREACH D GENERATE group AS dateTimeHour, COUNT(C) AS count;
 
-STORE E INTO 'hourly-counts-pig-all';
+STORE E INTO 'hourly-counts-pig-egypt';
 
 DUMP E;
 
